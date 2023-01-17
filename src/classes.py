@@ -1,16 +1,14 @@
 import configparser
 import os
 import helpers
-import csv
 import torch
+import torch.nn as nn
+import torch.optim as optim
+import time
+from tqdm import tqdm
+
 from model import DiscriminatorLin  as Discriminator
 from model import GeneratorLin as Generator
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import numpy as np
-import time
-
 
 class configReader:
     def __init__(self, path) -> None:
@@ -209,14 +207,14 @@ class GAN:
 
         print("Start Training")
 
-        time_start_t = time.time()
+        #time_start_t = time.time()
 
         losses = []
         samples = []
         fail = False
 
         # Train networks in epochs.
-        for epoch in range(num_epochs):
+        for epoch in tqdm(range(num_epochs)):
             self._Dis.train()
             self._Gen.train()
 
@@ -285,7 +283,7 @@ class GAN:
                 self._Gen.eval()         # Eval mode for generating samples.
                 samples_epoch = self._Gen(vector_fixed.get_data())
                 # saving after a configuered number of epochs
-                if epoch % model_save == 0:
+                if epoch> 0 and epoch % model_save == 0:
                     self._Dis.eval()
 
                     prefix = f"e_{epoch}"
@@ -298,13 +296,13 @@ class GAN:
                 # Print discriminator and generator losses.
 
                 samples.append(samples_epoch)
-                print(f"Epoche: {epoch+1} / {num_epochs}")
+                #print(f"Epoche: {epoch+1} / {num_epochs}")
                 self._epochs_trained += 1  # count trained epochs
         self._Dis.eval()
         self._Gen.eval()
-        time_end_t = time.time()
-        dur = (time_end_t - time_start_t)/60
-        print("Trainingsdauer[min]:", dur)
+        #time_end_t = time.time()
+        #dur = (time_end_t - time_start_t)/60
+        #print("Trainingsdauer[min]:", dur)
         path_samples = os.path.join(self.path_eval, "images_generated.pkl")
         helpers.save_object_to_pkl(obj=samples, path=path_samples)
 

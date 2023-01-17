@@ -1,7 +1,6 @@
 import os
 import helpers
 import glob
-from tqdm import tqdm
 import torch
 import classes
 from PIL import Image as im  # , ImageOps
@@ -27,7 +26,7 @@ path_dest_file = paths.get_path_file_images_real()
 # Read all jpg-files from image source folder to list of tensors
 image_list = []
 image_list_save = []
-for i in tqdm(range(2)):
+for i in range(2):
     path_folder = os.path.join(
         paths.get_path_folder_image_source(), f"{i+1}")
     path_jpgs = glob.glob(pathname=path_folder + '/*.JPG', recursive=True)
@@ -37,10 +36,8 @@ for i in tqdm(range(2)):
         conv)), dim=0) for img in path_jpgs]
     image_list += images
 
-# TBD: Prozentualer Anteil der Bilder entsprechen Config-Datei
-
 # Images normalizen to interval [-1,1)
-image_list_save = [img*2 - 1 for img in image_list]
+image_list_save = [helpers.scale(img) for img in image_list]
 helpers.save_object_to_pkl(image_list_save, path_dest_file)
 time_end = time.time()
 time_duration = (time_end-time_start)/60

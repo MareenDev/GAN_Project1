@@ -95,8 +95,11 @@ def check_config_for_training(config) -> bool:
     return result
 
 
-def create_images_from_tensorList(source_file, destination_folder):
+def create_images_from_pickle(source_file, destination_folder):
     samples = get_object_from_pkl(source_file)
+    create_images_from_tensorlist(samples,destination_folder)
+
+def create_images_from_tensorlist(samples,destination_folder):
     if samples is not None:
         for j, samplebatch in enumerate(samples):
             batch = rescale(samplebatch.detach())
@@ -104,6 +107,8 @@ def create_images_from_tensorList(source_file, destination_folder):
                 tens = batch[i]
                 img = tt.ToPILImage(mode='RGB')(tens)
                 filename = os.path.join( destination_folder, f"b{j+1}_sample{i+1}.jpg")
+                if not os.path.exists(destination_folder):
+                    os.mkdir(destination_folder)
                 img.save(filename)
 
 
