@@ -92,7 +92,7 @@ if helpers.check_config_for_training(config=config):
     #  (https://arxiv.org/pdf/1606.03498.pdf ->3.2)
     batch_size = hp_training["batch_size"]
     train_loader = DataLoader(
-        train_tensor, batch_size=batch_size, num_workers=hp_training["num_workers"], shuffle=True)
+        train_tensor, batch_size=batch_size, num_workers=hp_training["num_workers"])
 
     # --- Training epochs
     num_epochs = hp_training["epochs"]

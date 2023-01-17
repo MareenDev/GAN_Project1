@@ -4,11 +4,10 @@ import helpers
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import time
 from tqdm import tqdm
 
 from model import DiscriminatorLin  as Discriminator
-from model import GeneratorLin as Generator
+from model import GeneratorMixed as Generator
 
 class configReader:
     def __init__(self, path) -> None:
@@ -141,8 +140,8 @@ class GAN:
         self._Gen = Generator(
             in_size=gen_in, ch=gen_h, output_shape=img_shape, dropout_rate=gen_dr, slope=gen_slope)
 
-        # self._weights_init(self._Dis)
-        # self._weights_init(self._Gen)
+        self._weights_init(self._Dis)
+        self._weights_init(self._Gen)
 
     def load_model(self, filename_gen, filename_dis) -> bool:
         result = False
@@ -188,15 +187,12 @@ class GAN:
 
         # batch_size = D_out.size(0)
         if fake is True:
-            #            labels = torch.zeros(batch_size)+self._offset
             labels = torch.zeros_like(output)+self._offset
         else:
-            #            labels = torch.ones(batch_size)-self._offset
             labels = torch.ones_like(output)-self._offset
         criterion = nn.BCEWithLogitsLoss()
+
         # Calculate loss.
-        # t = torch.squeeze(D_out, dim=1)
-        # loss = criterion(t, labels)
         loss = criterion(output, labels)
         return loss
 
@@ -294,15 +290,13 @@ class GAN:
                     helpers.save_object_to_pkl(
                         obj=[samples_epoch], path=path_samples_e)
                 # Print discriminator and generator losses.
+                # Wenn alle Bilder einer epoche gleich sind, gib meldung aus!
 
                 samples.append(samples_epoch)
-                #print(f"Epoche: {epoch+1} / {num_epochs}")
                 self._epochs_trained += 1  # count trained epochs
         self._Dis.eval()
         self._Gen.eval()
-        #time_end_t = time.time()
-        #dur = (time_end_t - time_start_t)/60
-        #print("Trainingsdauer[min]:", dur)
+        
         path_samples = os.path.join(self.path_eval, "images_generated.pkl")
         helpers.save_object_to_pkl(obj=samples, path=path_samples)
 
