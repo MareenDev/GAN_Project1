@@ -314,12 +314,12 @@ class GAN:
 class pathForProject:
     def __init__(self) -> None:
         # folder-path
-        self._folder_prod = os.path.join("data", "production")
         self._folder_evaluation = os.path.join("data", "evaluation")
         self._folder_images = os.path.join("data", "images")
+        self._folder_model = os.path.join("data", "model","G_Mixed_D_Lin")
 
-    def get_path_folder_prod(self):
-        return self._folder_prod
+    def get_path_folder_model(self):
+        return self._folder_model
 
     def get_path_folder_evaluation(self):
         return self._folder_evaluation
