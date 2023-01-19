@@ -112,12 +112,35 @@ def create_images_from_tensorlist(samples,destination_folder):
                 img.save(filename)
 
 
-def create_collage_from_tensorlist(source_file, shape):
+def create_collage_from_tensorlist(tensorlist, folder):
+    # Erstelle samplelist
+    tensorlist = tensorlist[:9]
+    epo_nr = len(tensorlist)
+    batch_size = len(tensorlist[0])
+    # erstelle plot für alle bilder einer epoche
+    T = True
+    fig, axes = plt.subplots(
+        figsize=(batch_size*10, epo_nr*10), nrows=epo_nr, ncols=batch_size, sharey=T, sharex=T)
+    imgs = []
+    for i, (batch) in enumerate(tensorlist):
+        for j, (sample) in enumerate(batch):
+            #     erstelle plot für alle bilder einer epoche
+            #img = np.reshape(samples[i].detach()[j], shape)
+            img = np.transpose(batch.detach()[j].numpy(),(0,1,3))
+            imgs.append(img)
+    for k, (ax) in enumerate(axes.flatten()):
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+        ax.imshow(imgs[k])
+    n = os.path.join(folder, "plot.jpg")
+    fig.savefig(n)
+
+def create_collage_from_pkl(source_file, shape):
     # Erstelle samplelist
     samples = get_object_from_pkl(source_file)
     samples = samples[100:]
     folder, _ = os.path.split(source_file)
-    epo_nr = len(samples)
+    epo_nr = len(samples)[:49]
     batch_size = len(samples[0])
     # erstelle plot für alle bilder einer epoche
     T = True
@@ -127,7 +150,8 @@ def create_collage_from_tensorlist(source_file, shape):
     for i, (batch) in enumerate(samples):
         for j, (sample) in enumerate(batch):
             #     erstelle plot für alle bilder einer epoche
-            img = np.reshape(samples[i].detach()[j], shape)
+            #img = np.reshape(samples[i].detach()[j], shape)
+            img = samples[i].detach()[j].to_numpy()
             imgs.append(img)
     for k, (ax) in enumerate(axes.flatten()):
         ax.xaxis.set_visible(False)

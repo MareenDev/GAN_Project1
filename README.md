@@ -47,8 +47,8 @@ If you want to start a new training please follow this instruction:
    (If the training.py will be started a second time, the saved GAN-model will be used)
 
 ## ML evaluation
-1. make sure files `.\data\evaluation\generated_images.pkl` are available.
-2. By runnning script `.\src\evaluate.py the sampled images saved as picke-file will be created as jpg-Images
+1. make sure file `.\data\evaluation\generated_images.pkl` is available.
+2. By runnning script `.\src\evaluate.py` the sampled images saved as picke-file will be created as jpg-Images in folder `.\data\evaluation`
 
 ## Generate images with trained Generator
 1. run script  `.\data\test\create.py`

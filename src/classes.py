@@ -5,9 +5,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+import random
 
 from model import DiscriminatorLin  as Discriminator
-from model import GeneratorMixed as Generator
+from model import GeneratorMixed2 as Generator
+# from model import GeneratorMixed2 as Generator
+#from model import DiscriminatorDC  as Discriminator
+#from model import GeneratorDC as Generator
 
 class configReader:
     def __init__(self, path) -> None:
@@ -113,14 +117,14 @@ class GAN:
         # Init optimizer
         self._opt_gen = None
         self._opt_gen = None
-        self._offset = 0
+        self._offset_max = 0
         self._epochs_trained = 0
 
         self._paths = pathForProject()
         self.path_eval = self._paths.get_path_folder_evaluation()
 
     def setLossOffset(self, offset):
-        self._offset = offset
+        self._offset_max = offset
 
     def setOptimizer(self, gen_lr, dis_lr):
         self._opt_gen = optim.Adam(self._Gen.parameters(), gen_lr)
@@ -184,12 +188,12 @@ class GAN:
     def calculateLoss(self, D_out, fake):
         # Flatten the disc-output
         output = D_out.view(-1)
-
+        offset = round(random.uniform(0, self._offset_max), 2)
         # batch_size = D_out.size(0)
         if fake is True:
-            labels = torch.zeros_like(output)+self._offset
+            labels = torch.zeros_like(output)+offset
         else:
-            labels = torch.ones_like(output)-self._offset
+            labels = torch.ones_like(output)-offset
         criterion = nn.BCEWithLogitsLoss()
 
         # Calculate loss.
@@ -229,14 +233,13 @@ class GAN:
                     # a) set gradients to zero
                     self._opt_dis.zero_grad()
 
-                    # b) Train with real images + Compute the discriminator losses on those.
+                    # b) Calculate loss on real images for max(log(D(real))
                     D_real = self._Dis(images_real)
                     loss_dis_real = self.calculateLoss(
                         D_real, False)
 
-                    # c) Train with fake images + compute loss
-                    # To prevent vanishing Gradient use max(log(_Dis(_Gen(z)))) instead
-                    # of min log(1 - _Dis(_Gen(z))) do max log(_Dis(Gen(z)))
+                    # c) Calculate loss on fake images for
+
 
                     images_fake = self._Gen(vector.get_data())
                     Dis_fake = self._Dis(images_fake)
@@ -258,8 +261,9 @@ class GAN:
                     vector.refresh_data()
                     images_fake = self._Gen(vector.get_data())
 
-                    # c) Compute losses on fake images using flipped labels
-                    # and perform backpropagation
+                    # c) Compute losses on fake images 
+                    # To prevent vanishing Gradient use max(log(_Dis(_Gen(z)))) instead
+                    # of min log(1 - _Dis(_Gen(z)))  
                     Dis_fake = self._Dis(images_fake)
                     loss_gen = self.calculateLoss(Dis_fake, False)
                     loss_gen.backward()

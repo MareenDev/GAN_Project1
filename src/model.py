@@ -74,6 +74,9 @@ class GeneratorMixed(nn.Module):
         self._image_shape = output_shape
         output_size = np.prod(output_shape)
 
+        # convolution layer + Normalization
+        # kernel_size=3, stride=1 and padding=1 keeps the image-size constant (1 per dim)
+        # only channel-size will be changed in convolution layers
         self.l1 = nn.ConvTranspose2d(in_channels=in_size, out_channels=( ch*8), kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
         self.b1 = nn.BatchNorm2d(num_features=ch*8)
 
@@ -85,7 +88,8 @@ class GeneratorMixed(nn.Module):
 
         self.l4 = nn.ConvTranspose2d(in_channels=ch*2, out_channels=ch, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),  bias=False)
         self.b4 = nn.BatchNorm2d(num_features=ch)
-        # fuclly connected layer 
+        
+        # fully connected layer 
         self.fc1 = nn.Linear(ch, ch*2)
         self.fc2 = nn.Linear(ch*2,ch*4)
         self.fc3 = nn.Linear(ch*4, output_size)
@@ -95,20 +99,23 @@ class GeneratorMixed(nn.Module):
         self._leaky_relu_slope = slope
 
     def forward(self, x):
-    # Leaky relu to help with gradient flow.
-        z = self.l1(x)
-        y = F.leaky_relu(self.b1(z), self._leaky_relu_slope)
+        
+        # Leaky relu to help with gradient flow.
+        y = F.leaky_relu(self.b1(self.l1(x)), self._leaky_relu_slope)
         y = F.leaky_relu(self.b2(self.l2(y)), self._leaky_relu_slope)
         y = F.leaky_relu(self.b3(self.l3(y)), self._leaky_relu_slope)
         y = F.leaky_relu(self.b4(self.l4(y)), self._leaky_relu_slope)
-        z = torch.squeeze_copy(y)  # Wenn CNN
+        
+        # eliminating dimension of size 1
+        # tensor-shape (<batchsize>,<ch>,1,1)->(<batchsize>,<ch>)
+        z = torch.squeeze_copy(y)  
 
         y = F.leaky_relu(self.fc1(z), self._leaky_relu_slope)
         y = self._dropout(y)
         y = F.leaky_relu(self.fc2(y), self._leaky_relu_slope)
         y = self._dropout(y)
 
-        # Final layer with tanh acrivation to be in range [-1,1].
+        # Final layer with tanh activation to be in range [-1,1].
         y = torch.tanh(self.fc3(y))
         
         shape = tuple([len(x)]+list(self._image_shape))
@@ -117,6 +124,65 @@ class GeneratorMixed(nn.Module):
     def getInputsize(self):
         return self.l1.in_channels 
 
+class GeneratorMixed2(nn.Module):
+
+    def __init__(self, in_size, ch, output_shape, dropout_rate, slope):
+        super(GeneratorMixed2, self).__init__()
+        self._image_shape = output_shape
+        output_size = np.prod(output_shape)
+
+        # convolution layer + Normalization
+        # kernel_size=3, stride=1 and padding=1 keeps the image-size constant (1 per dim)
+        # only channel-size will be changed in convolution layers
+        self.l1 = nn.ConvTranspose2d(in_channels=in_size, out_channels=( ch*8), kernel_size=(4, 4), stride=(1, 1), padding=(0, 0), bias=False)
+        self.b1 = nn.BatchNorm2d(num_features=ch*8)
+
+        self.l2 = nn.ConvTranspose2d(in_channels=ch*8, out_channels=ch*4, kernel_size=(4,4), stride=(2, 2), padding=(1, 1),  bias=False)
+        self.b2 = nn.BatchNorm2d(num_features=ch*4)
+
+        self.l3 = nn.ConvTranspose2d(in_channels=ch*4, out_channels=ch*2, kernel_size=(3, 3), stride=(1, 1), padding=(4, 4),  bias=False)
+        self.b3 = nn.BatchNorm2d(num_features=ch*2)
+
+        self.l4 = nn.ConvTranspose2d(in_channels=ch*2, out_channels=ch, kernel_size=(3, 3), stride=(2,2), padding=(2, 2),  bias=False)
+        self.b4 = nn.BatchNorm2d(num_features=ch)
+        
+        # fully connected layer 
+        self.fc1 = nn.Linear(ch, ch*2)
+        self.fc2 = nn.Linear(ch*2,ch*4)
+        self.fc3 = nn.Linear(ch*4, output_size)
+
+    #     # Dropout layer for regularization.
+        self._dropout = nn.Dropout(dropout_rate)
+        self._leaky_relu_slope = slope
+
+    def forward(self, x):
+        
+        # Leaky relu to help with gradient flow.
+        y = F.leaky_relu(self.b1(self.l1(x)), self._leaky_relu_slope)
+        y = self._dropout(y)
+        y = F.leaky_relu(self.b2(self.l2(y)), self._leaky_relu_slope)
+        y = self._dropout(y)
+        y = F.leaky_relu(self.b3(self.l3(y)), self._leaky_relu_slope)
+        y = self._dropout(y)
+        y = F.leaky_relu(self.b4(self.l4(y)), self._leaky_relu_slope)
+        
+        # eliminating dimension of size 1
+        # tensor-shape (<batchsize>,<ch>,1,1)->(<batchsize>,<ch>)
+        z = torch.squeeze_copy(y)  
+
+        y = F.leaky_relu(self.fc1(z), self._leaky_relu_slope)
+        y = self._dropout(y)
+        y = F.leaky_relu(self.fc2(y), self._leaky_relu_slope)
+        y = self._dropout(y)
+
+        # Final layer with tanh activation to be in range [-1,1].
+        y = torch.tanh(self.fc3(y))
+        
+        shape = tuple([len(x)]+list(self._image_shape))
+        return torch.reshape(y, shape)
+
+    def getInputsize(self):
+        return self.l1.in_channels 
 
 class GeneratorLin(nn.Module):
 
@@ -137,7 +203,9 @@ class GeneratorLin(nn.Module):
     def forward(self, input):
         z = torch.squeeze_copy(input)
         y = F.leaky_relu(self._fc1(z), self._leaky_relu_slope)
+        y = self._dropout(y)
         y = F.leaky_relu(self._fc2(y), self._leaky_relu_slope)
+        y = self._dropout(y)
         y = F.leaky_relu(self._fc3(y), self._leaky_relu_slope)
         y = self._dropout(y)
         y = torch.tanh(self._fc4(y))
@@ -192,8 +260,6 @@ class GeneratorConv(nn.Module):
     def getInputsize(self):
         return self.l1.in_channels
 
-
-
 class GeneratorDC(nn.Module):
     def __init__(self, in_size, ch, output_shape, dropout_rate, slope):
         super(GeneratorDC, self).__init__()
@@ -201,19 +267,19 @@ class GeneratorDC(nn.Module):
         self.main = nn.Sequential(
             nn.ConvTranspose2d(in_size, ch * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ch * 8),
-            nn.ReLU(True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.ConvTranspose2d(ch * 8, ch * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ch * 4),
-            nn.ReLU(True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.ConvTranspose2d(ch * 4, ch * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ch * 2),
-            nn.ReLU(True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.ConvTranspose2d(ch * 2, ch, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ch),
-            nn.ReLU(True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.ConvTranspose2d(ch , ch, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ch),
-            nn.ReLU(True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.ConvTranspose2d(ch, 3, 4, 2, 1, bias=False),
             nn.Tanh()
         )
@@ -228,17 +294,18 @@ class DiscriminatorDC(nn.Module):
         super(DiscriminatorDC, self).__init__()
         self.main = nn.Sequential(
             nn.Conv2d(in_shape[0], hidden_dim, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.Conv2d(hidden_dim, hidden_dim * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(hidden_dim * 2),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.Conv2d(hidden_dim * 2, hidden_dim * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(hidden_dim * 4),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.Conv2d(hidden_dim * 4, hidden_dim * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(hidden_dim * 8),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(dropout_rate, inplace=True),
             nn.Conv2d(hidden_dim * 8, 1, 4, 1, 0, bias=False),
+            nn.Dropout2d(dropout_rate),
             nn.Sigmoid()
         )
 
